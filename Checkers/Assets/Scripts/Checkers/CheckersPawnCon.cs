@@ -53,7 +53,7 @@ public class CheckersPawnCon : CheckersComponent
             GetComponent<MeshRenderer>().material.SetColor("_Color", new Color(0.4f, 0.26f, 0.13f));
             GetComponent<MeshRenderer>().material.SetTexture("_TextureKing", textures[1]);
         }
-        GetComponent<MeshRenderer>().material.SetInt("IsKing", isKing?1:0);
+        //GetComponent<MeshRenderer>().material.SetInt("IsKing", isKing?1:0);
 
         CheckersBoardCon.blackCases[this.caseNumber - 1].isFree = false;
         CheckersBoardCon.blackCases[this.caseNumber - 1].pawn = this;
