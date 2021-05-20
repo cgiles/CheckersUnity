@@ -2,32 +2,43 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CheckersPawnCon : MonoBehaviour
+public class CheckersPawnCon : CheckersComponent
 {
-    public bool isWhite = false;
-    public Vector2Int id;
+
     public Vector2Int position;
     public bool isKing = false;
+    public bool instantDisplacement = true;
     public int caseNumber = 0;
+    public Texture2D[] textures = new Texture2D[2];
     // Start is called before the first frame update
     void Start()
     {
         if (isWhite)
         {
             GetComponent<MeshRenderer>().material.SetColor("_Color", Color.white);
+            GetComponent<MeshRenderer>().material.SetTexture("_TextureKing", textures[0]);
+            
+            
         }
         else
         {
             GetComponent<MeshRenderer>().material.SetColor("_Color", new Color(0.4f, 0.26f, 0.13f));
+            GetComponent<MeshRenderer>().material.SetTexture("_TextureKing", textures[1]);
         }
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+
     }
-    public virtual void Init(bool isW,Vector2Int pos,int caseNumber)
+    /// <summary>
+    /// Init the pawn
+    /// </summary>
+    /// <param name="isW"></param>
+    /// <param name="pos"></param>
+    /// <param name="caseNumber"></param>
+    public virtual void Init(bool isW, Vector2Int pos, int caseNumber)
     {
         isWhite = isW;
         position = pos;
@@ -35,21 +46,29 @@ public class CheckersPawnCon : MonoBehaviour
         if (isWhite)
         {
             GetComponent<MeshRenderer>().material.SetColor("_Color", Color.white);
+            GetComponent<MeshRenderer>().material.SetTexture("_TextureKing", textures[0]);
         }
         else
         {
-            GetComponent<MeshRenderer>().material.SetColor("_Color", new Color(0.4f,0.26f,0.13f));
+            GetComponent<MeshRenderer>().material.SetColor("_Color", new Color(0.4f, 0.26f, 0.13f));
+            GetComponent<MeshRenderer>().material.SetTexture("_TextureKing", textures[1]);
         }
-        CheckersBoardCon.blackCases[this.caseNumber-1].isFree = false;
-        CheckersBoardCon.blackCases[this.caseNumber-1].pawn = this;
+        GetComponent<MeshRenderer>().material.SetInt("IsKing", isKing?1:0);
+
+        CheckersBoardCon.blackCases[this.caseNumber - 1].isFree = false;
+        CheckersBoardCon.blackCases[this.caseNumber - 1].pawn = this;
         transform.tag = isWhite ? "White" : "Black";
     }
+    /// <summary>
+    /// Checks possible move, but not the capture
+    /// </summary>
+    /// <returns></returns>
     public List<CheckersCaseCon> GetPossibleMove()
     {
-        
+
 
         List<CheckersCaseCon> cases = new List<CheckersCaseCon>();
-        
+
         int nbUnit = caseNumber % 10;
         if (!isKing)
         {
@@ -91,16 +110,16 @@ public class CheckersPawnCon : MonoBehaviour
                 new Vector2Int(-1,-1),
                 new Vector2Int(1,-1),
                 new Vector2Int(1,1)
-                
+
             };
             Rect boardArea = new Rect();
-            boardArea.size=new Vector2(10, 10);
+            boardArea.size = new Vector2(10, 10);
             boardArea.x = -0.5f;
             boardArea.y = -0.5f;
-            
-            for(int d = 0; d < increments.Length; d++)
+
+            for (int d = 0; d < increments.Length; d++)
             {
-                Vector2Int newPos = position+increments[d];
+                Vector2Int newPos = position + increments[d];
 
                 while (boardArea.Contains(newPos))
                 {
@@ -108,18 +127,7 @@ public class CheckersPawnCon : MonoBehaviour
                     if (!CheckersBoardCon.GetCaseById(newPos).isFree)
                     {
                         break;
-                        if (CheckersBoardCon.GetCaseById(newPos).pawn.tag != tag)
-                        {
-                            if (!CheckersBoardCon.GetCaseById(newPos + increments[d]).isFree)
-                            {
-                                break;
-                            }
 
-                        }
-                        else
-                        {
-                            break;
-                        }
                     }
                     else
                     {
@@ -131,16 +139,47 @@ public class CheckersPawnCon : MonoBehaviour
 
                     }
                     Debug.Log(newPos.ToString() + " " + cases.Count.ToString());
-                    
+
                 }
-                Debug.Log(d.ToString()+" "+ cases.Count.ToString());
+                Debug.Log(d.ToString() + " " + cases.Count.ToString());
             }
             Debug.Log(cases.Count);
         }
 
         return cases;
     }
+    /// <summary>
+    /// Move the pawn, and make a king if reaches the other side
+    /// </summary>
+    /// <param name="aCase"></param>
     public void MoveTo(CheckersCaseCon aCase)
+    {
+        if (instantDisplacement)
+        {
+            Debug.Log("Moving");
+            CheckersCaseCon pCase = CheckersBoardCon.GetCaseByNumber(caseNumber);
+            pCase.isFree = true;
+            pCase.pawn = null;
+            caseNumber = aCase.number;
+            aCase.isFree = false;
+            aCase.pawn = this;
+            position = aCase.id;
+            transform.position = aCase.transform.position + Vector3.up * 0.25f;
+            if (tag == "White" && position.y == 9 && !isKing)
+            {
+                isKing = true;
+                GetComponent<MeshRenderer>().material.SetInt("IsKing", 1);
+            }
+            else if (tag == "Black" && position.y == 0 && !isKing)
+            {
+                isKing = true;
+                GetComponent<MeshRenderer>().material.SetInt("IsKing", 1);
+            }
+        }
+        else StartCoroutine(MovingTo(aCase));
+    }
+
+    IEnumerator MovingTo(CheckersCaseCon aCase)
     {
         Debug.Log("Moving");
         CheckersCaseCon pCase = CheckersBoardCon.GetCaseByNumber(caseNumber);
@@ -150,8 +189,8 @@ public class CheckersPawnCon : MonoBehaviour
         aCase.isFree = false;
         aCase.pawn = this;
         position = aCase.id;
-        transform.position = aCase.transform.position + Vector3.up * 0.25f;
-        if (tag == "White"&&position.y==9&&!isKing)
+        //transform.position = aCase.transform.position + Vector3.up * 0.25f;
+        if (tag == "White" && position.y == 9 && !isKing)
         {
             isKing = true;
         }
@@ -159,18 +198,32 @@ public class CheckersPawnCon : MonoBehaviour
         {
             isKing = true;
         }
+        float amount = 0;
+        while (amount < 1)
+        {
+            transform.position=Vector3.MoveTowards(transform.position, aCase.transform.position + Vector3.up * 0.25f,0.1f*Time.deltaTime);
+            amount += 0.1f*Time.deltaTime;
+            yield return new WaitForEndOfFrame();
+        }
     }
-   
+    /// <summary>
+    /// Similar to possible move, but check if we can capture
+    /// </summary>
+    /// <returns></returns>
     public List<(CheckersPawnCon, List<CheckersCaseCon>)> CheckCapture()
     {
-       
+
         return CheckCapture(CheckersBoardCon.GetCaseById(position));
     }
-    public List<(CheckersPawnCon,List<CheckersCaseCon>)> CheckCapture(CheckersCaseCon aCase)
+    /// <summary>
+    /// Similar to possible move, but check if we can capture
+    /// </summary>
+    /// <returns></returns>
+    public List<(CheckersPawnCon, List<CheckersCaseCon>)> CheckCapture(CheckersCaseCon aCase)
     {
         List<(CheckersPawnCon, List<CheckersCaseCon>)> result = new List<(CheckersPawnCon, List<CheckersCaseCon>)>();
-        
-        List<CheckersCaseCon> possiblePawns=new List<CheckersCaseCon>();
+
+        List<CheckersCaseCon> possiblePawns = new List<CheckersCaseCon>();
         List<CheckersCaseCon> neighborCases = new List<CheckersCaseCon>();
 
         if (!isKing)
@@ -224,14 +277,15 @@ public class CheckersPawnCon : MonoBehaviour
                 while (boardArea.Contains(newPos))
                 {
                     CheckersCaseCon nCase = CheckersBoardCon.GetCaseById(newPos);
-                    if (!nCase.isFree&&aPawn==null)
+                    if (!nCase.isFree && aPawn == null)
                     {
-                        if (nCase.pawn.tag != tag && boardArea.Contains(newPos + increments[d])) 
+                        if (nCase.pawn.tag != tag && boardArea.Contains(newPos + increments[d]))
                         {
-                            if (CheckersBoardCon.GetCaseById(newPos + increments[d]).isFree){
-                               
-                                    aPawn = nCase.pawn;
-                                    newPos += increments[d];
+                            if (CheckersBoardCon.GetCaseById(newPos + increments[d]).isFree)
+                            {
+
+                                aPawn = nCase.pawn;
+                                newPos += increments[d];
                                 nCase = CheckersBoardCon.GetCaseById(newPos);
                             }
                             else
@@ -244,7 +298,7 @@ public class CheckersPawnCon : MonoBehaviour
                             break;
                         }
                     }
-                    else if(!nCase.isFree && aPawn != null)
+                    else if (!nCase.isFree && aPawn != null)
                     {
                         break;
                     }
@@ -256,122 +310,6 @@ public class CheckersPawnCon : MonoBehaviour
         }
         return result;
     }
-    public (List<CheckersCaseCon>, List<CheckersPawnCon>) PossibleCapture()
-    {
-        return PossibleCapture(CheckersBoardCon.GetCaseById(position));
-    }
-    public (List<CheckersCaseCon>, List<CheckersPawnCon>) PossibleCapture(CheckersCaseCon aCase )
-    {
-        List<CheckersCaseCon> possibleCases = new List<CheckersCaseCon>();
-        List<CheckersCaseCon> neighborCases = new List<CheckersCaseCon>();
-       List<CheckersPawnCon> opponentPawns = new List<CheckersPawnCon>();
-        if (!isKing)
-        {
-            int nbUnit = aCase.number % 10;
-
-            if (aCase.id.x>1)
-            {
-                if (aCase.id.y < 8) neighborCases.Add(CheckersBoardCon.GetCaseById(aCase.id.x - 1, aCase.id.y + 1));
-                if (aCase.id.y > 1) neighborCases.Add(CheckersBoardCon.GetCaseById(aCase.id.x - 1, aCase.id.y - 1));
-            }
-            if (aCase.id.x<8)
-            {
-                if (aCase.id.y < 8) neighborCases.Add(CheckersBoardCon.GetCaseById(aCase.id.x + 1, aCase.id.y + 1));
-                if (aCase.id.y > 1) neighborCases.Add(CheckersBoardCon.GetCaseById(aCase.id.x + 1, aCase.id.y - 1));
-            }
-
-            for (int i = 0; i < neighborCases.Count; i++)
-            {
-
-                if (!neighborCases[i].isFree && neighborCases[i].pawn.tag != transform.tag)
-                {
-
-                    CheckersPawnCon opponentPawn = neighborCases[i].pawn;
-                    Vector2Int diff = opponentPawn.position - position;
-                    Vector2Int nextCaseId = opponentPawn.position + diff;
-                    if (CheckersBoardCon.GetCaseById(nextCaseId).isFree)
-                    {
-
-                        possibleCases.Add(CheckersBoardCon.GetCaseById(nextCaseId));
-                        opponentPawns.Add(opponentPawn);
-                    }
-                } 
-            }
-        }
-        else
-        {
-            Vector2Int[] increments = new Vector2Int[4]
-          {
-                new Vector2Int(-1,1),
-                new Vector2Int(-1,-1),
-                new Vector2Int(1,-1),
-                new Vector2Int(1,1)
-
-          };
-            Rect boardArea = new Rect();
-            boardArea.size = new Vector2(10, 10);
-            boardArea.x = -0.5f;
-            boardArea.y = -0.5f;
-            int pOpponentsNB = 0;
-            int oppenentCaptured=0;
-            for (int d = 0; d < increments.Length; d++)
-            {
-                Vector2Int newPos = position + increments[d];
-                List<CheckersCaseCon> possibleCasesT = new List<CheckersCaseCon>();
-                while (boardArea.Contains(newPos))
-                {
-                  
-                    if (!CheckersBoardCon.GetCaseById(newPos).isFree)
-                    {
-                      
-                        if (CheckersBoardCon.GetCaseById(newPos).pawn.tag != tag&&boardArea.Contains(newPos + increments[d]))
-                        {
-                            if (CheckersBoardCon.GetCaseById(newPos + increments[d]).isFree && boardArea.Contains(newPos + increments[d]))
-                            {
-                                possibleCasesT.Clear();
-                                opponentPawns.Add(CheckersBoardCon.GetCaseById(newPos).pawn);
-                                oppenentCaptured++;
-                                newPos += increments[d];
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
-                        else if(CheckersBoardCon.GetCaseById(newPos).pawn.tag == tag)
-                        {
-                            break;
-                        }
-                    }
-
-
-
-                    possibleCasesT.Add(CheckersBoardCon.GetCaseById(newPos));
-
-                    newPos += increments[d];
-                  
-
-                }
-                if (pOpponentsNB == 0 && opponentPawns.Count > 0)
-                {
-                    Debug.Log("King can capture"+opponentPawns[0].position.ToString());
-                    possibleCases.Clear();
-                    possibleCases.AddRange(possibleCasesT);
-                    pOpponentsNB = opponentPawns.Count;
-                }else if (opponentPawns.Count >= pOpponentsNB&& pOpponentsNB > 0)
-                {
-                    pOpponentsNB = opponentPawns.Count;
-                    opponentPawns.Add(opponentPawns[oppenentCaptured - 1]);
-                    possibleCases.AddRange(possibleCasesT);
-                }else if (pOpponentsNB == 0 && opponentPawns.Count == 0)
-                {
-                    possibleCases.AddRange(possibleCasesT);
-                }
-            }
-            Debug.Log(opponentPawns.Count.ToString() + "paws for : " + possibleCases.Count.ToString());
-        
-    }if (opponentPawns.Count == 0) possibleCases.Clear();
-        return (possibleCases,opponentPawns);
-    }
+    
 
 }

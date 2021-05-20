@@ -16,15 +16,22 @@ public class CheckersAI :CheckersPlayer
         
     }
     public override CheckersPawnCon PickPawn()
-    {
-        return CheckersManager.playablePawns[Random.Range(0, CheckersManager.playablePawns.Count)];
+    {   if (isPlaying)
+            return CheckersManager.playablePawns[Random.Range(0, CheckersManager.playablePawns.Count)];
+        else return null;
     }
     public override CheckersCaseCon PickCase()
     {
-        return CheckersManager.possibleCases[Random.Range(0, CheckersManager.possibleCases.Count)];
+        if (isPlaying)
+            return CheckersManager.possibleCases[Random.Range(0, CheckersManager.possibleCases.Count)];
+        else return null;
     }
     public override void Init()
     {
         base.Init();
     }
+}
+public class CheckersRound
+{
+  
 }

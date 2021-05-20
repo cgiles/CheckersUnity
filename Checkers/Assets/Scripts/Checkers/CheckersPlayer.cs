@@ -7,6 +7,7 @@ public class CheckersPlayer : MonoBehaviour
     // Start is called before the first frame update
     public bool isWhite = true;
     public  string  playerTag;
+    public bool isPlaying = false;
     Camera cam;
     void Start()
     {
@@ -18,6 +19,10 @@ public class CheckersPlayer : MonoBehaviour
     {
         
     }
+    /// <summary>
+    /// Pick a pawn, by clicking on it
+    /// </summary>
+    /// <returns></returns>
     public virtual CheckersPawnCon PickPawn()
     {
        
@@ -28,7 +33,7 @@ public class CheckersPlayer : MonoBehaviour
             
             if (Physics.Raycast(ray,out hit,Mathf.Infinity))
             {
-              
+                Debug.Log("ping");
                 if (hit.collider.GetComponent<CheckersPawnCon>())
                 {
 
@@ -47,6 +52,10 @@ public class CheckersPlayer : MonoBehaviour
         }
         return null;
     }
+    /// <summary>
+    /// pick a case by clicking on it
+    /// </summary>
+    /// <returns></returns>
    public virtual CheckersCaseCon PickCase()
     {
         Ray ray = cam.ScreenPointToRay(Input.mousePosition);
@@ -71,6 +80,9 @@ public class CheckersPlayer : MonoBehaviour
         }
         return null;
     }
+    /// <summary>
+    /// Init the player
+    /// </summary>
     public virtual void Init()
     {
         cam = Camera.main;

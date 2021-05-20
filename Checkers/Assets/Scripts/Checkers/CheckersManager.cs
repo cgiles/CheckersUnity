@@ -15,31 +15,39 @@ public class CheckersManager : MonoBehaviour
 
     public static List<CheckersPawnCon> playablePawns;
     public static List<CheckersCaseCon> possibleCases;
+    
 
     bool isPlaying = true;
     // Start is called before the first frame update
    public CheckersPlayer[] players = new CheckersPlayer[2];
     int currentPlayer = 0;
+    
     void Start()
     {
-        PlacePawns();
+        
         StartGame();
     }
 
     // Update is called once per frame
     void Update()
     {
-        
     }
     /// <summary>
     /// Generate the pawns over the board
     /// </summary>
     void PlacePawns()
     {
+        foreach (CheckersPawnCon p in pawns)
+        {
+            Destroy(p.gameObject);
+        }
+        pawns.Clear();
+        blackPawns.Clear();
+        whitePawns.Clear(); 
         for(int i = 0; i < nbPawns; i++)
         {
             Vector2Int pos = CheckersBoardCon.blackCases[i].id;
-            CheckersPawnCon aPawn = Instantiate(pawn, new Vector3(pos.x, 0.25f, pos.y), Quaternion.identity,transform);
+            CheckersPawnCon aPawn = Instantiate(pawn, new Vector3(pos.x, 0.25f, pos.y), Quaternion.Euler(0,240,0),transform);
             aPawn.Init(false, pos,i+1);
             aPawn.isKing = areKings;
             pawns.Add(aPawn);
@@ -48,7 +56,7 @@ public class CheckersManager : MonoBehaviour
         for(int i = 50-nbPawns; i < 50; i++)
         {
             Vector2Int pos = CheckersBoardCon.blackCases[i].id;
-            CheckersPawnCon aPawn = Instantiate(pawn, new Vector3(pos.x,0.25f,pos.y), Quaternion.identity,transform);
+            CheckersPawnCon aPawn = Instantiate(pawn, new Vector3(pos.x,0.25f,pos.y), Quaternion.Euler(0,240, 0), transform);
             aPawn.Init(true, pos,i+1);
             pawns.Add(aPawn);
             aPawn.isKing = areKings;
@@ -60,9 +68,16 @@ public class CheckersManager : MonoBehaviour
     /// </summary>
     void StartGame()
     {
+        
+        PlacePawns();
         currentPlayer = 0;
         players[0].isWhite = true;
+        players[0].isPlaying = true;
         players[1].isWhite = false;
+        foreach (CheckersPlayer p in players)
+        {
+            p.Init();
+        }
         StartCoroutine(NextTurn());
     }
     /// <summary>
@@ -71,108 +86,187 @@ public class CheckersManager : MonoBehaviour
     /// <returns></returns>
     IEnumerator NextTurn()
     {
+
         yield return new WaitForEndOfFrame();
+        CheckersPawnCon pawnToPlay = null;
+        CheckersCaseCon pickedCase = null;
+        possibleCases = new List<CheckersCaseCon>();
+        List<(CheckersPawnCon, List<CheckersCaseCon>)> possibleCaptures = new List<(CheckersPawnCon, List<CheckersCaseCon>)>();
+        bool canCaptureMore = false;
         while (isPlaying)
         {
+            yield return new WaitForEndOfFrame();
             foreach (GameObject g in displayers) Destroy(g);
             displayers.Clear();
-            
-            CheckersPawnCon pawnToPlay = null;
-            CheckersCaseCon pickedCase = null;
+
+
 
 
             bool canCapture;
-             playablePawns = CheckPlayablePawns(out canCapture);
+            playablePawns = CheckPlayablePawns(out canCapture);
             DisplayPlayablePawns(playablePawns);
-            yield return new WaitForEndOfFrame();
+
+
+
+
             if (playablePawns.Count > 1)
             {
-                while (pawnToPlay == null)
+                CheckersPawnCon aPawn = players[currentPlayer].PickPawn();
+                if (playablePawns.Contains(aPawn))
                 {
+                    pawnToPlay = aPawn;
 
-
-                    CheckersPawnCon aPawn = players[currentPlayer].PickPawn();
-
-                    if (playablePawns.Contains(aPawn)) pawnToPlay = aPawn;
-                    yield return new WaitForEndOfFrame();
                 }
             }
-            else pawnToPlay = playablePawns[0];
+            else
+            {
+                pawnToPlay = playablePawns[0];
+            }
 
-            bool canCaptureMore = false;
-            do
+            if (pawnToPlay != null)
             {
                 possibleCases = new List<CheckersCaseCon>();
-                List<(CheckersPawnCon, List<CheckersCaseCon>)> possibleCaptures = pawnToPlay.CheckCapture();
-                //possibleCases = pawnToPlay.PossibleCapture().Item1.Count > 0 ? pawnToPlay.PossibleCapture().Item1 : pawnToPlay.GetPossibleMove();
-                if (possibleCaptures.Count > 0) {
+                possibleCaptures = pawnToPlay.CheckCapture();
+                if (possibleCaptures.Count > 0)
+                {
                     Debug.Log("nblist : " + possibleCaptures[0].Item2.Count.ToString());
-                    foreach((CheckersPawnCon,List<CheckersCaseCon>) pC in possibleCaptures)
+                    foreach ((CheckersPawnCon, List<CheckersCaseCon>) pC in possibleCaptures)
                     {
                         possibleCases.AddRange(pC.Item2);
                     }
-                }else possibleCases = pawnToPlay.GetPossibleMove();
-                
-                 pickedCase = null;
-                DisplayPossibleCases(possibleCases);
-                while (pickedCase == null)
-                {
-                    CheckersCaseCon aCase = null;
-                    if (players[currentPlayer].PickCase() != null)
-                    {
-                        aCase = players[currentPlayer].PickCase();
-                    }
-                    else if (players[currentPlayer].PickCase() != null)
-                    {
-                        canCapture = false;
-                        canCaptureMore = false;
-                        break;
-                    }
-                    //Debug.Log("how many cases to move : " + possibleCases.Count.ToString());
-                    if (possibleCases.Contains(aCase))
-                    {
-                        Debug.Log("pawn Picked");
-                        pickedCase = aCase;
-                    }
-                    yield return new WaitForEndOfFrame();
                 }
-                if (canCapture)
+                else possibleCases = pawnToPlay.GetPossibleMove();
+            }
+            if (possibleCases.Count > 0) DisplayPossibleCases(possibleCases);
+
+            if ((pawnToPlay != null && pickedCase == null) || (pawnToPlay != null /*&& pickedCase == null*/ && canCaptureMore))
+            {
+                CheckersCaseCon aCase = null;
+                aCase = players[currentPlayer].PickCase();
+                if (possibleCases.Contains(aCase))
                 {
-                    foreach ((CheckersPawnCon,List<CheckersCaseCon>) pC in possibleCaptures)
+                    pickedCase = aCase;
+                    if (canCapture || canCaptureMore) 
                     {
-                        if (pC.Item2.Contains(pickedCase))
+                        Debug.Log(possibleCaptures.Count);
+                   
+                        foreach ((CheckersPawnCon, List<CheckersCaseCon>) pC in possibleCaptures)
                         {
-                            CapturePawn(pC.Item1);
-                            pawnToPlay.MoveTo(pickedCase);
-                            canCaptureMore = pawnToPlay.CheckCapture().Count > 0;
-                            break;
+                            if (pC.Item2.Contains(pickedCase))
+                            {
+                                CapturePawn(pC.Item1);
+                                pawnToPlay.MoveTo(pickedCase);
+                                canCaptureMore = pawnToPlay.CheckCapture().Count > 0;
+
+                                 pickedCase = null;
+                               
+                            }
                         }
                     }
-/*Debug.Log("how many cases after capture : " + possibleCases.Count.ToString());
-                    int idCapture = pawnToPlay.PossibleCapture().Item1.IndexOf(pickedCase);
-                    CapturePawn(pawnToPlay.PossibleCapture().Item2[idCapture]);
-                    Debug.Log("moving to");
-                    
-                    pawnToPlay.MoveTo(pickedCase);
-                    Debug.Log("moved to");
-                    canCaptureMore = pawnToPlay.PossibleCapture().Item1.Count > 0;*/
+                    else
+                    {
+                        pawnToPlay.MoveTo(pickedCase);
+                        pawnToPlay = null;
+                        pickedCase = null;
+                        playablePawns.Clear();
+                        possibleCaptures.Clear();
+                        possibleCases.Clear();
+                        canCaptureMore = false;
+
+                        SwitchPlayers();
+                        yield return new WaitForEndOfFrame();
+                    }
+                   /*if (canCapture&&!canCaptureMore)
+                    {
+                        pawnToPlay = null;
+                        pickedCase = null;
+                        playablePawns.Clear();
+                        possibleCaptures.Clear();
+                        possibleCases.Clear();
+                        SwitchPlayers();
+                    }*/
+                    /* if (playablePawns.Count > 1)
+                     {
+                         while (pawnToPlay == null)
+                         {
+                             yield return new WaitForFixedUpdate();
+
+                             CheckersPawnCon aPawn = players[currentPlayer].PickPawn();
+
+                             if (playablePawns.Contains(aPawn)) pawnToPlay = aPawn;
+
+                         }
+                     }
+                     else pawnToPlay = playablePawns[0];
+
+                     bool canCaptureMore = false;
+                     do
+                     {
+                         possibleCases = new List<CheckersCaseCon>();
+                         List<(CheckersPawnCon, List<CheckersCaseCon>)> possibleCaptures = pawnToPlay.CheckCapture();
+                         //possibleCases = pawnToPlay.PossibleCapture().Item1.Count > 0 ? pawnToPlay.PossibleCapture().Item1 : pawnToPlay.GetPossibleMove();
+                         if (possibleCaptures.Count > 0) {
+                             Debug.Log("nblist : " + possibleCaptures[0].Item2.Count.ToString());
+                             foreach((CheckersPawnCon,List<CheckersCaseCon>) pC in possibleCaptures)
+                             {
+                                 possibleCases.AddRange(pC.Item2);
+                             }
+                         }else possibleCases = pawnToPlay.GetPossibleMove();
+
+                          pickedCase = null;
+                         DisplayPossibleCases(possibleCases);
+                         while (pickedCase == null)
+                         {
+                             CheckersCaseCon aCase = null;
+                             if (players[currentPlayer].PickCase() != null)
+                             {
+                                 aCase = players[currentPlayer].PickCase();
+                             }
+
+                             //Debug.Log("how many cases to move : " + possibleCases.Count.ToString());
+                             if (possibleCases.Contains(aCase))
+                             {
+                                 Debug.Log("pawn Picked");
+                                 pickedCase = aCase;
+                             }
+                             yield return new WaitForEndOfFrame();
+                         }
+                         if (canCapture)
+                         {
+                             foreach ((CheckersPawnCon,List<CheckersCaseCon>) pC in possibleCaptures)
+                             {
+                                 if (pC.Item2.Contains(pickedCase))
+                                 {
+                                     CapturePawn(pC.Item1);
+                                     pawnToPlay.MoveTo(pickedCase);
+                                     canCaptureMore = pawnToPlay.CheckCapture().Count > 0;
+                                     break;
+                                 }
+                             }
+                         }
+                         else if(pickedCase!=null)
+                             pawnToPlay.MoveTo(pickedCase);
+                     } while (canCaptureMore);
+                     if (blackPawns.Count > 0 && whitePawns.Count > 0&&pickedCase!=null)
+                     {
+                         yield return new WaitForEndOfFrame();
+                         SwitchPlayers();
+                     }
+                     else if(blackPawns.Count == 0 || whitePawns.Count == 0)
+                     {
+                         isPlaying = false;
+                         Debug.Log("GameOver");
+                     }
+                     yield return new WaitForEndOfFrame();
+                 }*/
                 }
-                else if(pickedCase!=null)
-                    pawnToPlay.MoveTo(pickedCase);
-            } while (canCaptureMore);
-            if (blackPawns.Count > 0 && whitePawns.Count > 0&&pickedCase!=null)
-            {
-                yield return new WaitForEndOfFrame();
-                SwitchPlayers();
             }
-            else if(blackPawns.Count == 0 || whitePawns.Count == 0)
-            {
-                isPlaying = false;
-                Debug.Log("GameOver");
-            }
-            yield return new WaitForEndOfFrame();
         }
     }
+    /// <summary>
+    /// show the paws the player can play
+    /// </summary>
+    /// <param name="possiblePawns"></param>
     void DisplayPlayablePawns(List<CheckersPawnCon> possiblePawns)
     {
         foreach (GameObject g in displayers) Destroy(g);
@@ -180,10 +274,14 @@ public class CheckersManager : MonoBehaviour
         foreach (CheckersPawnCon g in possiblePawns)
         {
             GameObject aSphere = Instantiate(spherePawn, g.transform.position, Quaternion.identity);
-            aSphere.transform.localScale = Vector3.one * 0.25f;
+            aSphere.transform.localScale = Vector3.one * 0.5f;
             displayers.Add(aSphere);
         }
     }
+    /// <summary>
+    /// Show which case is available for the selected pawn
+    /// </summary>
+    /// <param name="possibleCases"></param>
     void DisplayPossibleCases(List<CheckersCaseCon> possibleCases)
     {
         foreach (GameObject g in displayers) Destroy(g);
@@ -195,9 +293,14 @@ public class CheckersManager : MonoBehaviour
             displayers.Add(aSphere);
         }
     }
+    /// <summary>
+    /// simply switch the players
+    /// </summary>
     void SwitchPlayers()
     {
+        players[currentPlayer].isPlaying = false;
         currentPlayer = (currentPlayer + 1) % 2;
+        players[currentPlayer].isPlaying = true;
     }
     void CapturePawn(CheckersPawnCon prey)
     {
@@ -216,7 +319,7 @@ public class CheckersManager : MonoBehaviour
         pCase.isFree = true;
         pCase.pawn = null;
         Destroy(prey.gameObject);
-    }
+    }   
    public List<CheckersPawnCon> CheckPlayablePawns(out bool canCapture)
     {
         canCapture = false;
