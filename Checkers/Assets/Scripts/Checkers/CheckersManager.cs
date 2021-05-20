@@ -93,6 +93,7 @@ public class CheckersManager : MonoBehaviour
         possibleCases = new List<CheckersCaseCon>();
         List<(CheckersPawnCon, List<CheckersCaseCon>)> possibleCaptures = new List<(CheckersPawnCon, List<CheckersCaseCon>)>();
         bool canCaptureMore = false;
+        bool canCapture;
         while (isPlaying)
         {
             yield return new WaitForEndOfFrame();
@@ -102,7 +103,7 @@ public class CheckersManager : MonoBehaviour
 
 
 
-            bool canCapture;
+            
             playablePawns = CheckPlayablePawns(out canCapture);
             DisplayPlayablePawns(playablePawns);
 
@@ -138,7 +139,7 @@ public class CheckersManager : MonoBehaviour
                 else possibleCases = pawnToPlay.GetPossibleMove();
             }
             if (possibleCases.Count > 0) DisplayPossibleCases(possibleCases);
-
+            Debug.Log(canCaptureMore.ToString() + " __ " + canCapture.ToString());
             if ((pawnToPlay != null && pickedCase == null) || (pawnToPlay != null /*&& pickedCase == null*/ && canCaptureMore))
             {
                 CheckersCaseCon aCase = null;
@@ -146,10 +147,10 @@ public class CheckersManager : MonoBehaviour
                 if (possibleCases.Contains(aCase))
                 {
                     pickedCase = aCase;
-                    if (canCapture || canCaptureMore) 
+                    if (canCapture || canCaptureMore)
                     {
                         Debug.Log(possibleCaptures.Count);
-                   
+
                         foreach ((CheckersPawnCon, List<CheckersCaseCon>) pC in possibleCaptures)
                         {
                             if (pC.Item2.Contains(pickedCase))
@@ -157,10 +158,19 @@ public class CheckersManager : MonoBehaviour
                                 CapturePawn(pC.Item1);
                                 pawnToPlay.MoveTo(pickedCase);
                                 canCaptureMore = pawnToPlay.CheckCapture().Count > 0;
+                                canCapture = false;
+                                pickedCase = null;
 
-                                 pickedCase = null;
-                               
                             }
+                        }
+                        if (!canCaptureMore)
+                        {
+                            pawnToPlay = null;
+                            pickedCase = null;
+                            playablePawns.Clear();
+                            possibleCaptures.Clear();
+                            possibleCases.Clear();
+                            SwitchPlayers();
                         }
                     }
                     else
@@ -176,9 +186,10 @@ public class CheckersManager : MonoBehaviour
                         SwitchPlayers();
                         yield return new WaitForEndOfFrame();
                     }
-                
+
                 }
             }
+            else if (pawnToPlay != null && pickedCase != null) SwitchPlayers();
         }
     }
     /// <summary>
