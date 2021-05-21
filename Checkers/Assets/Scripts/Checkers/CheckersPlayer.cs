@@ -33,7 +33,7 @@ public class CheckersPlayer : MonoBehaviour
             
             if (Physics.Raycast(ray,out hit,Mathf.Infinity))
             {
-                Debug.Log("ping");
+             
                 if (hit.collider.GetComponent<CheckersPawnCon>())
                 {
 

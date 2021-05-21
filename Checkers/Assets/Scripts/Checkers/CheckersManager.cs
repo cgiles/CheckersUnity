@@ -31,6 +31,13 @@ public class CheckersManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (Input.GetButtonDown("Jump"))
+        {
+            CheckersRound round = new CheckersRound(pawns, true);
+            round.ShowBoard();
+            bool capture;
+            Debug.Log("playable : "+round.GetPlayablePawn(out capture).Count.ToString());
+        }
     }
     /// <summary>
     /// Generate the pawns over the board
@@ -130,7 +137,7 @@ public class CheckersManager : MonoBehaviour
                 possibleCaptures = pawnToPlay.CheckCapture();
                 if (possibleCaptures.Count > 0)
                 {
-                    Debug.Log("nblist : " + possibleCaptures[0].Item2.Count.ToString());
+                   
                     foreach ((CheckersPawnCon, List<CheckersCaseCon>) pC in possibleCaptures)
                     {
                         possibleCases.AddRange(pC.Item2);
@@ -139,7 +146,7 @@ public class CheckersManager : MonoBehaviour
                 else possibleCases = pawnToPlay.GetPossibleMove();
             }
             if (possibleCases.Count > 0) DisplayPossibleCases(possibleCases);
-            Debug.Log(canCaptureMore.ToString() + " __ " + canCapture.ToString());
+          
             if ((pawnToPlay != null && pickedCase == null) || (pawnToPlay != null /*&& pickedCase == null*/ && canCaptureMore))
             {
                 CheckersCaseCon aCase = null;
@@ -213,8 +220,8 @@ public class CheckersManager : MonoBehaviour
     /// <param name="possibleCases"></param>
     void DisplayPossibleCases(List<CheckersCaseCon> possibleCases)
     {
-        foreach (GameObject g in displayers) Destroy(g);
-        displayers.Clear();
+       // foreach (GameObject g in displayers) Destroy(g);
+      //  displayers.Clear();
         foreach (CheckersCaseCon aCase in possibleCases)
         {
             GameObject aSphere = Instantiate(sphereMove, aCase.transform.position, Quaternion.identity);
@@ -227,6 +234,7 @@ public class CheckersManager : MonoBehaviour
     /// </summary>
     void SwitchPlayers()
     {
+        IsGameOver();
         players[currentPlayer].isPlaying = false;
         currentPlayer = (currentPlayer + 1) % 2;
         players[currentPlayer].isPlaying = true;
@@ -289,5 +297,16 @@ public class CheckersManager : MonoBehaviour
 
         }
         return predatorPawns.Count>0?predatorPawns:playablePawns;
+    }
+    bool IsGameOver()
+    {
+       
+        if (blackPawns.Count == 0 || whitePawns.Count == 0)
+        {
+            StopAllCoroutines();
+            isPlaying = false;
+            return true;
+        }
+        else return false;
     }
 }

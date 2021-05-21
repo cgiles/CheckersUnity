@@ -138,12 +138,12 @@ public class CheckersPawnCon : CheckersComponent
                         newPos += increments[d];
 
                     }
-                    Debug.Log(newPos.ToString() + " " + cases.Count.ToString());
+               //     Debug.Log(newPos.ToString() + " " + cases.Count.ToString());
 
                 }
-                Debug.Log(d.ToString() + " " + cases.Count.ToString());
+              //  Debug.Log(d.ToString() + " " + cases.Count.ToString());
             }
-            Debug.Log(cases.Count);
+          //  Debug.Log(cases.Count);
         }
 
         return cases;
@@ -310,6 +310,6 @@ public class CheckersPawnCon : CheckersComponent
         }
         return result;
     }
-    
+  
 
 }
